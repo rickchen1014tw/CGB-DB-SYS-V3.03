@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans default-lazy-init="true"
+	xmlns="http://www.springframework.org/schema/beans"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:util="http://www.springframework.org/schema/util"
+	xmlns:jpa="http://www.springframework.org/schema/data/jpa"
+	xsi:schemaLocation="  
+       http://www.springframework.org/schema/beans   
+       http://www.springframework.org/schema/beans/spring-beans.xsd  
+       http://www.springframework.org/schema/mvc   
+       http://www.springframework.org/schema/mvc/spring-mvc.xsd   
+       http://www.springframework.org/schema/tx   
+       http://www.springframework.org/schema/tx/spring-tx.xsd   
+       http://www.springframework.org/schema/aop 
+       http://www.springframework.org/schema/aop/spring-aop.xsd
+       http://www.springframework.org/schema/util 
+       http://www.springframework.org/schema/util/spring-util.xsd
+       http://www.springframework.org/schema/data/jpa 
+       http://www.springframework.org/schema/data/jpa/spring-jpa.xsd
+       http://www.springframework.org/schema/context
+      http://www.springframework.org/schema/context/spring-context.xsd">
+
+	<!-- 配置securityManager對象(shiro框架核心) -->
+	<bean id="securityManager"
+		class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+		<property name="Realm" ref="shiroUserRealm" /> <!-- shiroUserRealm 類名首字母小寫 -->
+		<property name="CacheManager" ref="cacheManager"/>
+		<property name="RememberMeManager" ref="rememberMeManager"/>
+		<property name="SessionManager" ref="sessionManager"></property>
+	</bean>
+	
+	<!-- 記住我配置 -->
+	<bean id="rememberMeCookie" class="org.apache.shiro.web.servlet.SimpleCookie">
+		<constructor-arg value="rememberMe"/><!-- 構造注入 -->
+		<!-- 7天，用spring el表達式來計算，方便修改 -->
+		<property name="MaxAge" value="#{7 * 24 * 60 * 60}"/>
+	</bean>
+	<bean id="rememberMeManager" class="org.apache.shiro.web.mgt.CookieRememberMeManager">
+		<property name="cookie" ref="rememberMeCookie"/>
+	</bean>
+
+	<!-- 配置session管理器 -->
+	<bean id="sessionManager"
+		class="org.apache.shiro.web.session.mgt.DefaultWebSessionManager">
+		<!-- session的失效時長，單位毫秒1小時:3600000，itzixi站點設置以6小時為主:21600000 -->
+		<!-- 設置全局會話超時時間，默認30分鐘，即如果30分鐘內沒有訪問會話將過期1800000 -->
+		<property name="globalSessionTimeout" value="#{1000*60*60}" />
+		<!-- 刪除失效的session，默認是true-->
+		<property name="deleteInvalidSessions" value="true" />
+		<!-- 是否開啟會話驗證器，默認是開啟的 -->
+		<property name="sessionValidationSchedulerEnabled" value="true" />
+	</bean>
+	
+	<!-- 配置shiro中的緩存 -->
+	<bean id="cacheManager" class="org.apache.shiro.cache.MemoryConstrainedCacheManager"/>
+
+	<!-- 配置ShiroFilterFactoryBean對象 -->
+	<bean id="shiroFilterFactory"
+		class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+		<property name="SecurityManager" ref="securityManager" />
+		<property name="LoginUrl" value="/doLoginUI.do" />
+		<!-- 設置請求過濾規則 -->
+		<property name="FilterChainDefinitionMap">
+			<map>
+				<entry key="/bower_components/**" value="anon" />
+				<entry key="/build/**" value="anon" />
+				<entry key="/dist/**" value="anon" />
+				<entry key="/plugins/**" value="anon" />
+				<entry key="/user/doLogin.do" value="anon" />	<!-- 認證操作允許匿名訪問 -->
+				<entry key="/doLogout.do" value="logout" />	<!-- 設定logout -->
+			<!--  	<entry key="/**" value="authc" />--><!-- 必須認證 -->
+				<entry key="/**" value="user"/>
+				<!-- authc 必須認証，假如添加了記住我功能以後需要設置為user -->		
+			</map>
+		</property>
+	</bean>
+	
+	<!-- Shiro授權配置 -->
+	<!-- 配置bean對象的生命周期管理 -->
+	<bean id="lifecycleBeanPostProcessor"
+		class="org.apache.shiro.spring.LifecycleBeanPostProcessor">
+	</bean>
+	<!-- 通過此配置要為目標業務對象創建代理對象 -->
+	<bean
+		class="org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator"
+		depends-on="lifecycleBeanPostProcessor">
+	</bean>
+	<!-- 授權屬性的Advisor配置 -->
+	<bean
+		class="org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor">
+		<property name="SecurityManager" ref="securityManager" />
+	</bean>
+</beans>

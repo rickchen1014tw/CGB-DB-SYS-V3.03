@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans default-lazy-init="true"
+	xmlns="http://www.springframework.org/schema/beans"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:util="http://www.springframework.org/schema/util"
+	xmlns:jpa="http://www.springframework.org/schema/data/jpa"
+	xsi:schemaLocation="  
+       http://www.springframework.org/schema/beans   
+       http://www.springframework.org/schema/beans/spring-beans.xsd  
+       http://www.springframework.org/schema/mvc   
+       http://www.springframework.org/schema/mvc/spring-mvc.xsd   
+       http://www.springframework.org/schema/tx   
+       http://www.springframework.org/schema/tx/spring-tx.xsd   
+       http://www.springframework.org/schema/aop 
+       http://www.springframework.org/schema/aop/spring-aop.xsd
+       http://www.springframework.org/schema/util 
+       http://www.springframework.org/schema/util/spring-util.xsd
+       http://www.springframework.org/schema/data/jpa 
+       http://www.springframework.org/schema/data/jpa/spring-jpa.xsd
+       http://www.springframework.org/schema/context
+      http://www.springframework.org/schema/context/spring-context.xsd">
+
+	<!-- 掃描com.db.sys.service以及他的子包  掃描Shiro配置類所在的包-->
+	<context:component-scan base-package="com.db.sys.service,com.db.common.config" />
+	<!-- 掃描切面類所在的包 -->
+	<context:component-scan base-package="com.db.common.aspect" />
+	<!-- <import resource="classpath:spring-shiro.xml" />  改用註解配置Shiro，記得要加入掃描Shiro Config類所在的包-->
+
+	<!-- 啟用AOP註解(會註冊bean對象，掃描所有@Aspect描述的對象，自動為目標對象創建代理對象) -->
+	<aop:aspectj-autoproxy />
+
+	<!-- 配置事務管理器對象 -->
+	<!--單體架構事務控制要透過Connection來實現，Connection從data source來獲取，所以這邊要給他配置一個data source -->
+	<!-- 我們想看事務的執行流程，可以在DataSourceTransactionManager類的doCommit()方法加斷點，再debug執行 -->
+	<bean id="txManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+	<!-- 啟用註解方式的事務配置(此元素會註冊一個bean對象，該bean對象會掃描所有事務切入點) -->
+	<tx:annotation-driven transaction-manager="txManager"/>
+</beans>

@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.db.sys.dao.SysRoleDao">
+	<!-- 當前命名空間使用二級緩存(參考官網映射文件的配置) -->
+	<cache eviction="Lru" readOnly="true" flushInterval="60000" size="512"/>
+	<!-- 通過sql標簽提取共性 -->
+	<sql id="queryWhereId">
+		<where>
+			<if test="name!=null and name!=''">
+				name like concat("%",#{name},"%")
+			</if>
+		</where>
+	</sql>
+
+	<!-- 按條件統計總記錄數 -->
+	<select id="getRowCount" resultType="int">
+		select count(*)
+		from sys_roles
+		<!-- 通過include標簽引入通過sql標簽定義的id -->
+		<include refid="queryWhereId" />
+	</select>
+	<!-- 多行記錄結果會放到一個list集合，系統會自動處理 -->
+	<!-- 查詢當前頁記錄 -->
+	<select id="findPageObjects"
+		resultType="com.db.sys.entity.SysRole">
+		select *
+		from sys_roles
+		<include refid="queryWhereId" />
+		order by
+		createdTime desc
+		limit #{startIndex}, #{pageSize}
+	</select>
+<!--  改成如下的語句讓查詢結果動態的排序
+	<select id="findPageObjects"
+		resultType="com.db.sys.entity.SysRole">
+		select *
+		from sys_roles
+		<include refid="queryWhereId" />
+		order by
+		${column} ${descOrAsc}
+		limit #{startIndex}, #{pageSize}
+	</select>
+-->	
+	<!-- 基於角色id刪除角色自身信息 -->
+	<delete id="deleteObject">
+		delete from sys_roles
+		where id=#{id}
+	</delete>
+	
+	<!-- 
+	 1)useGeneratedKeys="true" 表示使用自動生成的主鍵值
+	 2)keyProperty="id" 表示將主鍵值賦值給參數對象的id屬性(調用這個對象的setId()方法) 
+	 -->
+	<insert id="insertObject"
+		    parameterType="com.db.sys.entity.SysRole" 
+		    useGeneratedKeys="true"
+		    keyProperty="id">
+		insert into sys_roles
+		(id,name,note,createdTime,modifiedTime,
+		createdUser,modifiedUser)
+		values
+		(null,#{name},#{note},now(),now(),
+		#{createdUser},#{modifiedUser})
+	</insert>
+	
+	<update id="updateObject">
+		update sys_roles
+		set name=#{name},
+			note=#{note},
+			modifiedTime=now(),
+			modifiedUser=#{modifiedUser}
+		where id=#{id}	
+	</update>
+	
+	<!-- 自定義結果映射。resultMap什麼時候用?一般是在關聯映射時用，查兩張表來映射到一個對象上，
+	或是當表中的字段名跟類中的set方法名不匹配時，也要使用resultMap -->
+	<resultMap type="com.db.sys.vo.SysRoleMenuVo" id="sysRoleMenuVo">
+		<!-- one2many 基於角色id查詢菜單id並將其值存儲到SysRoleMenuVo對象的menuIds屬性上(透過setMenuIds()方法)-->
+		<!-- com.db.sys.dao.SysRoleMenuDao.findMenuIdsByRoleId可以不用去接口定義相對應的方法 -->
+		<collection property="menuIds"
+					column="id"	
+					select="com.db.sys.dao.SysRoleMenuDao.findMenuIdsByRoleId">
+		</collection>	
+	</resultMap>
+	
+	<!-- 基於id查詢角色信息, 關聯查詢，先查詢角色信息，映射到sysRoleMenuVo對象，
+	在對象這邊又再基於id去做了關聯表中的查詢，再映射到sysRoleMenuVo對象裡 -->
+	<select id="findObjectById" resultMap="sysRoleMenuVo">
+		select id, name, note
+		from sys_roles
+		where id=#{id}
+	</select>
+	
+	<!-- 查詢所有角色信息 -->
+	<select id="findObjects" resultType="com.db.common.vo.CheckBox">
+		select id,name
+		from sys_roles
+	</select>
+	
+	<select id="getRowCountByName">
+		select count(*)
+		from sys_roles
+		where name=#{name}
+	</select>
+
+</mapper>

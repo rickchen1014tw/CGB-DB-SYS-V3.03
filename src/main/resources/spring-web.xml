@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans default-lazy-init="true"
+	xmlns="http://www.springframework.org/schema/beans"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:util="http://www.springframework.org/schema/util"
+	xmlns:jpa="http://www.springframework.org/schema/data/jpa"
+	xsi:schemaLocation="  
+       http://www.springframework.org/schema/beans   
+       http://www.springframework.org/schema/beans/spring-beans.xsd  
+       http://www.springframework.org/schema/mvc   
+       http://www.springframework.org/schema/mvc/spring-mvc.xsd   
+       http://www.springframework.org/schema/tx   
+       http://www.springframework.org/schema/tx/spring-tx.xsd   
+       http://www.springframework.org/schema/aop 
+       http://www.springframework.org/schema/aop/spring-aop.xsd
+       http://www.springframework.org/schema/util 
+       http://www.springframework.org/schema/util/spring-util.xsd
+       http://www.springframework.org/schema/data/jpa 
+       http://www.springframework.org/schema/data/jpa/spring-jpa.xsd
+       http://www.springframework.org/schema/context
+      http://www.springframework.org/schema/context/spring-context.xsd">
+      
+	<context:component-scan
+		base-package="com.db.sys.controller,com.db.common.web" />
+	<!-- 啟用mvc默認配置(內置一部分bean對象的定義) -->
+	<mvc:annotation-driven /><!-- 註冊默認的bean去處理把對象轉換json字符串 -->
+	<!-- 注冊視圖解析對象 -->
+	<bean id="viewResovler"
+		class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<property name="Prefix" value="/WEB-INF/pages/" />
+		<property name="Suffix" value=".html" />
+	</bean>
+	
+	<!-- 配置spring mvc攔截器 -->
+	<mvc:interceptors>
+		<mvc:interceptor>
+			<!-- 定義要攔截的請求 -->
+			<!-- <mvc:exclude-mapping path=""/> 哪些請求不攔截-->
+			<!-- <mvc:mapping path="/user/*"/> -->
+			<mvc:mapping path="/user/doLogin.do"/>
+			<!-- 使用如下bean進行攔截處理 -->
+			<!--  <bean class="com.db.common.web.TimeAccessInterceptor"></bean> 
+			因為我們已經用註解方式把這個類交給Spring管理，所以就不用像上面這樣定義，用下面的方式即可-->
+			<ref bean="timeAccessInterceptor"/>
+		</mvc:interceptor>
+		<!-- 多個攔截器時，哪個優先執行要看 "配置順序",  按寫在xml上的順序-->
+	</mvc:interceptors>
+</beans>

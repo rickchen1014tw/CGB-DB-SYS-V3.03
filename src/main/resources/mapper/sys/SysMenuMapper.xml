@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.db.sys.dao.SysMenuDao">
+	<!-- 查詢所有菜單以及對應的上級菜單名稱 -->
+	<select id="findObjects" resultType="map"><!-- map是一個別名配置，系統默認支持這個別名，所以不需要寫java.util.HashMap -->
+		select c.*,p.name parentName	<!-- c裡面有一個name，p裡面也有，若p.name不取別名，往map裡放值時，k相同，值會覆蓋 -->
+		from sys_menus c left join sys_menus p
+		on c.parentId=p.id	
+		
+		<!-- 方案二
+		select c.*,(select p.name
+					from sys_menus p
+					where c.parentId=p.id) parentName 
+		from sys_menus c
+		 -->
+	</select>
+	
+	<!-- 統計指定id下有多少個子元素 -->
+	<select id="getChildCount" resultType="int">
+		select count(*)
+		from sys_menus
+		where parentId=#{id}
+	</select>
+	
+	<!-- 基於id刪除菜單元素 -->
+	<delete id="deleteObject"><!-- 除了select，其它可以不用寫resultType -->
+		delete from sys_menus
+		where id=#{id}
+	</delete>
+	
+	<select id="findZtreeMenuNodes" resultType="com.db.common.vo.Node">
+		select id, name, parentId 
+		from sys_menus
+	</select>
+
+	<insert id="insertObject" parameterType="com.db.sys.entity.SysMenu">
+		insert into sys_menus
+		(name,url,type,sort,note,parentId,permission,
+		createdTime,modifiedTime,createdUser,modifiedUser)
+		values
+		(#{name},#{url},#{type},#{sort},#{note},#{parentId},#{permission},
+		now(),now(),#{createdUser},#{modifiedUser})
+	</insert>
+
+	<update id="updateObject" parameterType="com.db.sys.entity.SysMenu">
+		update sys_menus
+		set
+			name=#{name},
+			type=#{type},
+			sort=#{sort},
+			url=#{url},
+			parentId=#{parentId},
+			permission=#{permission},
+			modifiedUser=#{modifiedUser},
+			modifiedTime=now()
+		where id=#{id}
+	</update>
+
+	<select id="findPermissions" resultType="string"><!-- string是別名，首字母小寫 -->
+		select permission 
+		from sys_menus
+		where id in
+		<foreach collection="menuIds" open="(" close=")" separator="," item="menuId">
+			#{menuId}
+		</foreach>
+	</select>
+</mapper>

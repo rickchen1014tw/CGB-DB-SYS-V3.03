@@ -1,0 +1,73 @@
+<ul class="pagination pagination-sm no-margin pull-right">
+	<li><a class="first">首页</a></li>
+	<li><a class="pre">上一页</a></li>
+	<li><a class="next">下一页</a></li>
+	<li><a class="last">尾页</a></li>
+	<li><a class="rowCount">总记录数(0)</a></li>
+	<li><a class="pageCount">总页数(0)</a></li>
+	<li><a class="pageCurrent">当前页(1)</a></li>
+</ul>
+<script type="text/javascript">
+	//在頁面加載完成之後再去註冊事件
+	$(function(){
+		//$(".pagination").on("click",".first,.pre,.next,.last",doJumptoPage)
+		//在pageId內部的子元素(.first,.pre,...)註冊點擊事件
+		$("#pageId").on("click",".first,.pre,.next,.last",doJumptoPage) //若寫成doJumptoPage()事件註冊的時候就會調用他
+	});
+
+	//初始化分頁信息
+	function doSetPagination(pageObject) {
+		//1.初始化總記錄數
+		$(".rowCount").html("總記錄數("+pageObject.rowCount+")"); //.html()在這個元素內部設置新內容
+		//2.初始化總頁數
+		$(".pageCount").html("總頁數("+pageObject.pageCount+")");
+		//3.初始化當前頁碼
+		$(".pageCurrent").html("當前頁("+pageObject.pageCurrent+")");
+		//4.存儲當前頁碼值以及總頁數
+		$("#pageId").data("pageCount",pageObject.pageCount);
+		$("#pageId").data("pageCurrent",pageObject.pageCurrent);
+		//其中jQuery為每個dom對象(html元素對象)都定義了一個data函數
+		//這個函數類似java語言map對象中的put方法和get方法，
+		//當方法中有兩個參數時就是存數據，一個參數時就是取數據
+		//说明:data函数为jquery中的一个数据绑定函数
+        //其语法:data(key,[value]);
+	}
+	
+	function doJumptoPage(){ 
+		//$(this)當前被點擊的對象
+		//prop(...)為jQuery中的一個函數，用於獲取對象屬性值或為對象屬性賦值
+		//1.獲取點擊對象的class屬性值
+		var cls = $(this).prop("class");
+		//$(this).prop("class","...");
+		//console.log("class",cls);
+		//2.基於class屬性的值修改當前頁碼值
+		//2.1獲取當前頁碼值以及總頁數
+		var pageCurrent=$("#pageId").data("pageCurrent");
+		var pageCount=$("#pageId").data("pageCount");
+		//2.2基於class屬性的值修改當前頁碼值
+		if(cls=="first"){
+			pageCurrent=1;
+		}else if(cls=="next" && pageCurrent<pageCount){
+			pageCurrent++;
+		}else if(cls=="pre"){
+			pageCurrent--;
+		}else if(cls=="last"){
+			pageCurrent=pageCount;
+		}else{
+			return;
+		}
+		//3.基於新的頁碼值進行當前頁查詢
+		//3.1存儲當前頁碼值
+		$("#pageId").data("pageCurrent",pageCurrent);
+		doGetObjects();
+	}
+
+</script>
+
+
+
+
+
+
+
+

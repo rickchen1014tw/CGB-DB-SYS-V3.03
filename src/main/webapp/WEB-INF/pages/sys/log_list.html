@@ -1,0 +1,243 @@
+<div class="row">
+	<div class="col-xs-12">
+		<div class="box">
+			<div class="box-header">
+				<h3 class="box-title">日志管理</h3>
+
+				<div class="box-tools">
+					<div class="input-group input-group-sm" style="width: 350px;">
+						<input type="text" name="table_search" id="searchNameId"
+							class="form-control pull-right" placeholder="用户名">
+
+						<div class="input-group-btn">
+							<button type="button" class="btn btn-default btn-search">
+                                <i class="fa fa-search"></i>
+							</button>
+							<button type="button" class="btn btn-default btn-delete">删除</button>
+						</div>
+					</div>
+				</div>
+			</div>
+			<!-- /.box-header -->
+			<div class="box-body table-responsive no-padding">
+				<table class="table table-hover">
+					<thead>
+						<tr>
+						    <th><input type="checkbox" id="checkAll">全选</th>
+							<th>用户名</th>
+							<th>操作</th>
+							<th>请求方法</th>
+							<th>请求参数</th>
+							<th>IP地址</th>
+							<th>执行时间</th>
+						</tr>
+					</thead>
+					<tbody id="tbodyId">
+					    <tr>
+					       <td colspan="7">数据加载中...</td>
+					    </tr>
+					</tbody>
+				</table>
+			</div>
+			<div id="pageId" class="box-footer clearfix">
+			      
+			</div>
+			<!-- /.box-body -->
+		</div>
+		<!-- /.box -->
+	</div>
+</div>
+<script type="text/javascript">
+	//這裡沒有引入jQuery可以使用jQuery嗎?可以，因為這個頁面之後會經由load放到start.html裡
+	$(function() {
+		//頁面加載完成，異步加載分頁div
+		//後面的函數是事件處理函數，等著異步加載的頁面加載完成以後再去執行該函數，從而保證兩個動作的先後順序
+		$("#pageId").load("doPageUI.do", function(){
+			doGetObjects();	
+		});
+		//搜索按鈕事件註冊
+		$(".input-group-btn")
+		.on("click",".btn-search",doQueryObjects)
+		.on("click",".btn-delete",doDeleteObjects)
+		//.on("click","#checkAll",doChangeTBodyCheckBoxState)
+		//全選按鈕事件註冊，用上面跟下面都可以
+		$("#checkAll").click(doChangeTBodyCheckBoxState);
+		//tbody中checkbox對象事件註冊
+		//這行代碼執行時，只要tbodyId是存在的，且當你點擊時cBox是存在的，事件註冊就沒有問題
+		$("#tbodyId").on("click",".cBox",doChangeTHeadCheckBoxState);
+		//沒有用下面這種寫法，必須要執行這行時cBox要已存在，但現在是頁面先加載完，之後查詢的數據才會load進來
+		//也就是執行這行的時候cBox還不存在
+		//$(".cBox").click(doChangeTHeadCheckBoxState);
+	})
+
+	function doGetObjects(){
+		$("#checkAll").prop("checked",false);
+		//debugger	//控制台窗口打開時才有意義，才會進入debug
+		//1.定義請求參數
+		//var params = {"pageCurrent":1}; //Json格式的JS對象
+		var pageCurrent=$("#pageId").data("pageCurrent");
+		if(!pageCurrent)//第一次點擊左側的日誌管理時，pageCurrent還沒有值，是undefined
+			pageCurrent=1;
+		var params = {"pageCurrent":pageCurrent};
+		//當查詢時獲取用戶輸入的用名並添加到參數對象中
+		var username=$("#searchNameId").val();
+		if(username)
+			params.username=username; //在這個js對象添加一個k和v，.username要和控制層的參數名一樣
+		//var params = "pageCurrent=1"; 也可以
+		//2.定義請求的url
+		var url = "log/doFindPageObjects.do";
+		//3.發送異步請求
+		//為什麼要用異步起工作線程的方式?假如所有的事情都在瀏覽器中的一個主線程去完成的，在執行比較耗時的操作時，就可能會卡住
+		//通過工作線程與服務器進行交互，主線程只負責一些UI的更新
+		//調jQuery的函數去服務器端取數據，當服務器端有返回結果的時候會回調function這個函數，$.get會發起一個異步請求
+		//這個函數自動把服務端返回的字符串轉換成json格式的js對象
+		//這個函數會去分析你的數據格式，假如是json格式他會把你轉成json格式的js對象
+		//get函數為jQuery內部的一個異步請求函數
+		//$.get(url,params,function(result){	//響應結束執行此函數callback
+		//	console.log(result);
+		//});
+		$.getJSON(url,params,function(result){	//響應結束執行此函數callback
+			console.log(result);
+			//處理服務端的響應結果
+			doHandleResponseResult(result);
+		});//getJSON是一個特殊的get函數
+	}
+	
+	function doHandleResponseResult(result){//JsonResult
+		if(result.state == 1){	
+			//1.呈現當前頁的記錄信息
+			//console.log("records",result.data.records);
+			doSetTableBodyRows(result.data.records);
+			//2.呈現當前頁的分頁頁碼信息
+			doSetPagination(result.data); //PageObject
+		}else{
+			//給出相關提示
+			alert(result.message);
+		}
+	}
+	
+	function doSetTableBodyRows(records) {
+		//1.獲取tbody對象並清空原有內容
+		var tBody=$("#tbodyId");
+		tBody.empty(); //清空tbody中內容，jQuery函數
+		//2.迭代記錄並將其內容添加到tbody中
+		for(var i=0;i<records.length;i++){
+			//2.1構建tr對象
+			var tr=$("<tr></tr>");
+			//2.2構建多個td對象
+			var tds=doCreateTds(records[i]);
+			//2.3將td追加到tr中
+			tr.append(tds);
+			//2.4將tr追加到tbody中
+			tBody.append(tr);
+		}
+	}
+	
+	function doCreateTds(data){
+		var tds="<td><input type='checkbox' class='cBox' name='cItem' value='"+data.id+"'></td>"+
+			   	 "<td>"+data.username+"</td>"+
+			     "<td>"+data.operation+"</td>"+
+			     "<td>"+data.method+"</td>"+
+			     "<td>"+data.params+"</td>"+
+			     "<td>"+data.ip+"</td>"+
+			     "<td>"+data.time+"</td>";	   
+		return tds;
+	}
+	
+	//基於用戶名查詢
+	function doQueryObjects(){
+		//1.初始化當前頁碼值
+		$("#pageId").data("pageCurrent",1);
+		//2.執行查詢操作
+		doGetObjects();	
+	}
+	
+	//修改tbody中checkbox對象狀態
+	function doChangeTBodyCheckBoxState(){
+		//1.獲取全選checkbox對象狀態
+		var checked = $(this).prop("checked");
+		//2.修改tbody中checkbox對象狀態
+		$("#tbodyId input[type='checkbox']").each(function(){
+			$(this).prop("checked", checked);
+		})
+	}
+	
+	//修改thead中checkbox對象的狀態
+	function doChangeTHeadCheckBoxState(){
+		//1.定義一個變量，給定初始化值true
+		var flag = true;
+		//2.獲tbody中checkbox對象狀態並與flag進行邏輯操作
+		$("#tbodyId input[type='checkbox']").each(function(){
+			flag = flag && $(this).prop("checked");
+		})
+		//3.修改thead中checkbox值
+		$("#checkAll").prop("checked", flag);
+	}
+	
+	function doGetCheckedIds(){
+		//1.定義一個數組
+		var array = []; //或寫new Array();也可以
+		//2.迭代所有tbody中checkbox
+		$("#tbodyId input[type='checkbox']").each(function(){ //一旦發現該元素則執行函數
+			//判定元素是否選中(選中時checked屬性值true)
+			if($(this).prop("checked")){//prop()獲取當前對象屬性的值
+				//將選中對象的value存儲到數組
+				array.push($(this).val())
+			}
+		})
+		//3.返回數組
+		return array;
+	}
+	
+	//執行刪除操作
+	function doDeleteObjects(){
+		//1.獲取選中的記錄ID並判定
+		var idArray = doGetCheckedIds();
+		//console.log(idArray);
+		if(!idArray || idArray.length==0){
+			alert("請先選擇");
+			return
+		}	
+		//2.給出提示信息是否確認刪除
+		if(!confirm("確認刪除? "))
+			return;
+		//3.執行刪除操作
+		//3.1定義請求的參數
+		//為什麼要在這做轉換呢?idArray是一個數組，spring mvc不認識js的數組，idArray.toString()是一個字符串 36,37,38
+		var params={"ids":idArray.toString()};
+		console.log("params.ids",params.ids);
+		//3.2定義請求URL
+		var url="log/doDeleteObjects.do";
+		//3.3發送異步請求執行刪除
+		$.post(url,params,function(result){ //這裡我們用post方法，用get方法也可以，controller的方法要用@RequestMapping或是@PostMapping來修飾
+			if(result.state==1){
+				alert(result.message);
+				doSetPageCurrent();
+				doGetObjects();
+			}else{
+				alert(result.message);
+			}
+		})
+	}
+	function doSetPageCurrent(){
+		var pageCount=$("#pageId").data("pageCount");
+    	var pageCurrent=$("#pageId").data("pageCurrent");
+    	var checked=$("#checkAll").prop("checked");
+    	if(pageCurrent==pageCount&&checked&&pageCurrent>1){
+    		pageCurrent--;
+    		$("#pageId").data("pageCurrent",pageCurrent);
+    	}
+  	}
+
+</script>
+
+
+
+
+
+
+
+
+
+
+

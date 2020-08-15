@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.db.sys.dao.SysLogDao">
+	<!-- 當前命名空間使用二級緩存(參考官網映射文件的配置) -->
+	<cache eviction="Lru" readOnly="true" flushInterval="60000" size="512"/>
+	<!-- 通過sql標簽提取共性 -->
+	<sql id="queryWhereId">
+		<where>
+			<if test="username!=null and username!=''">
+				username like concat("%",#{username},"%")
+			</if>
+		</where>
+	</sql>
+
+	<!-- 按條件統計總記錄數 -->
+	<select id="getRowCount" resultType="int">
+		select count(*)
+		from sys_logs
+		<!-- 通過include標簽引入通過sql標簽定義的id -->
+		<include refid="queryWhereId" />
+	</select>
+	<!-- 多行記錄結果會放到一個list集合，系統會自動處理 -->
+	<!-- 查詢當前頁記錄 -->
+	<select id="findPageObjects"
+		resultType="com.db.sys.entity.SysLog">
+		select *
+		from sys_logs
+		<include refid="queryWhereId" />
+		order by
+		createdTime desc
+		limit #{startIndex}, #{pageSize}
+	</select>
+
+	<delete id="deleteObjects">
+		delete from sys_logs where id in <!-- (1,2,3,4) -->
+		<foreach collection="ids" open="(" close=")" separator=","
+			item="id">
+			${id}
+		</foreach>
+	</delete>
+
+	<insert id="insertObject">
+		insert into sys_logs
+		(username,operation,method,params,time,ip,createdTime)
+		values
+		(#{username},#{operation},#{method},#{params},#{time},#{ip},#{createdTime})
+	</insert>
+
+</mapper>

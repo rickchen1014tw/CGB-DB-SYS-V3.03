@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans default-lazy-init="true"
+	xmlns="http://www.springframework.org/schema/beans"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:util="http://www.springframework.org/schema/util"
+	xmlns:jpa="http://www.springframework.org/schema/data/jpa"
+	xsi:schemaLocation="  
+       http://www.springframework.org/schema/beans   
+       http://www.springframework.org/schema/beans/spring-beans.xsd  
+       http://www.springframework.org/schema/mvc   
+       http://www.springframework.org/schema/mvc/spring-mvc.xsd   
+       http://www.springframework.org/schema/tx   
+       http://www.springframework.org/schema/tx/spring-tx.xsd   
+       http://www.springframework.org/schema/aop 
+       http://www.springframework.org/schema/aop/spring-aop.xsd
+       http://www.springframework.org/schema/util 
+       http://www.springframework.org/schema/util/spring-util.xsd
+       http://www.springframework.org/schema/data/jpa 
+       http://www.springframework.org/schema/data/jpa/spring-jpa.xsd
+       http://www.springframework.org/schema/context
+      http://www.springframework.org/schema/context/spring-context.xsd">
+	<!-- 系統底層會建一個Properties對象，並將此對象交給Spring管理，Properties對象實現了Map接口， 這個對象會把db.properties裡的內容存到Map中 -->
+	<!-- 在<bean></bean>裡定義的全是bean對象 -->
+	<util:properties id="cfg"
+		location="classpath:db.properties" />
+	<!-- 配置druid對象 -->
+	<bean id="dataSource"
+		class="com.alibaba.druid.pool.DruidDataSource" init-method="init"
+		destroy-method="close" lazy-init="false">
+		<property name="DriverClassName" value="#{cfg.jdbcDriver}" />
+		<property name="Url" value="#{cfg.jdbcUrl}" />
+		<property name="Username" value="#{cfg.jdbcUser}" />
+		<property name="Password" value="#{cfg.jdbcPassword}" />
+	</bean>
+	<!-- 整合mybatis框架 -->
+	<bean id="sqlSessionFactory"
+		class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		<!-- 設置mapper文件的位置 -->
+		<!-- classpath*表示多個類路徑(不同磁碟下面)，在這寫classpath:mapper/sys/*.xml也可 -->
+		<property name="MapperLocations" value="classpath*:mapper/sys/*.xml" />
+	</bean>
+	<!-- 上面的配置等於於下面的代碼(官網)
+	 @Bean 
+	 public SqlSessionFactory sqlSessionFactory() { 
+	 	SqlSessionFactoryBean factoryBean = new SqlSessionFactoryBean(); 
+	 	factoryBean.setDataSource(dataSource()); 
+		return factoryBean.getObject();
+	 } 
+	 在spring的配置文件中只要配置了實現FactoryBean接口的bean對象, 
+		系統底層放在池裡的都是getObject()創建的對象 所以取出來要寫 SqlSessionFactory factoryBean = ctx.getBean("sqlSessionFactory", 
+		SqlSessionFactory.class); 
+	-->
+	<!-- 通過此bean對象掃描指定包下的dao接口，並基於接口創建其實現類對象(代理對象)，並把實現類放到map容器，k為接口名首字母小寫 -->
+	<!-- 系統底層掃描到dao接口的時候，會為他創建一個實現類，並為他注入sqlSessionFactory -->
+	<!-- 可以參考官網https://mybatis.org/spring/mappers.html	Scanning for mappers -->
+	<bean id="daoScanner"
+		class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<property name="BasePackage" value="com.db.**.dao" /><!-- 會去掃描指定包以及子包下的所有dao -->
+		<!-- 當spring容器只有一個sqlSessionFactory時如下配置可以不寫 -->
+		<property name="SqlSessionFactoryBeanName" value="sqlSessionFactory" /><!-- 這裡用value而不是ref是因為方法參數不是對象而是字符串 -->
+	</bean>
+	<context:component-scan base-package="com.db.sys.dao.impl"></context:component-scan>
+
+</beans>
